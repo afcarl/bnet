@@ -1,6 +1,6 @@
 import numpy as N
 import networkx as nx
-
+import itertools
 import pydot
 
 class NodeException(Exception): pass
@@ -73,6 +73,10 @@ class Network(nx.DiGraph):
     def ordering(self):
         lut = self.graph['inlut']
         return list(lut[n] for n in lut.iterkeys())
+        
+    @property
+    def adj_mat(self):
+        return nx.adjacency_matrix(self)
         
     def add_edges_from(self, edges, attr_dict=None, **attr):
         """Add edges from [edges] to the network
@@ -214,7 +218,22 @@ def random_network(nodes, required_edges=(), prohibited_edges=(), max_attempts=5
     net = Network(nodes)
     
     return _randomize(net)
-
+    
+def randomDAG(nodes, white_edges=(), black_edges=(), prob=.5):
+    """Generate a random DAG"""
+    
+    #shuffle the nodes
+    N.random.shuffle(nodes)
+    
+    #add the white edges
+    net = Network(nodes, white_edges)
+    
+    for e in itertools.combinations(nodes, 2):
+        if N.random.randn() < prob:
+            net.add_edge(*e)
+    
+    return net
+    
 def dist(net1, net2):
     """Return the distance between two networks
     Defined as how many edges must be added and removed to make net1==net2
@@ -222,8 +241,6 @@ def dist(net1, net2):
     """
     x, y = map(nx.adj_matrix, (net1, net2))
 
-    
-    
     if x.shape != y.shape:
         if x.shape > y.shape:
             #make it so y is always >= to x
@@ -237,3 +254,10 @@ def dist(net1, net2):
         x = x_tmp
         
     return N.sum(N.abs(x-y))
+    
+def is_strongly_connected(G):
+    """Can be passed and edge dictionary or Graph"""
+    if isinstance(G, dict):
+        return len(G.keys()) == nx.strongly_connected.number_strongly_connected_components(G)
+    else:
+        return nx.strongly_connected.is_strongly_connected(G)
