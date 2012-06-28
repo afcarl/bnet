@@ -25,7 +25,9 @@ def cpt(net, data, nodes=None):
             #print "z:{0}\ty:{1}".format(z,y)
             cpt[state] = tiny if y == 0 or z == 0 else float(z)/y
         d['cpt'] = cpt
+        d['cptdim'] = tuple(in_edges)
         
+
 def multicpt(net, data, nodes=None):
     """Multiprocessing version of cpt"""
     
