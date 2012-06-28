@@ -2,6 +2,7 @@ import numpy as N
 import networkx as nx
 import itertools
 import pydot
+import matplotlib.pyplot as plt
 
 class NodeException(Exception): pass
 
@@ -140,6 +141,48 @@ class Network(nx.DiGraph):
         """Uses a depth-first search (dfs) to detect cycles."""
 
         return nx.is_directed_acyclic_graph(self)    
+        
+    def jointprob(self, states):
+        """Calculate the joint probability of state (2d numpy array)
+        Each row is a state vector, and each column the state values
+        
+        P(state=(0,1,0,2,1,5)) = P(A=0|parents)
+                                *P(B=1|parents)
+                                *P(C=0|parents)
+                                *P(D=2|parents)
+        to aid in the computation, logs are used and then added and exponetiated
+        at the end.
+        
+        The order of variables in the state vector should coincide with the indexes
+        of the lookup table for network"""
+        states = N.atleast_2d(states)
+        probs = N.zeros(states.shape)
+        probs.fill(N.finfo(float).tiny)
+        _node = self.node
+        _graph = self.graph
+        for index in N.ndindex(states.shape):
+            #i=variable index, v=state value
+            
+            #get variable label
+            var = _graph['inlut'][index[1]]
+            #get the variable cpt dimensions (these are the parents of var)
+            var_pred = _node[var]['cptdim']
+            #get the parents node ids
+            var_pred_ind = [_graph['nilut'][x] for x in var_pred]
+            
+            try:
+                cptstate = tuple([_node[v]['states'][states[index[0],p]] for v, p in zip(var_pred, var_pred_ind)])
+            except KeyError:
+                print "Invalid state: {0} does not have state {1}".format(v, states[index[0],p])
+                continue
+            
+            #print var, cptstate
+            #print self.node[var]['cpt'].shape
+            probs[index] = _node[var]['cpt'][cptstate]
+            
+        
+        probs = N.sum(N.log(probs), axis=1)
+        return {tuple(k):v for k, v in zip(states, probs)}
        
     def layout(self, prog="dot", args=''): 
         """Determines network layout using Graphviz's dot algorithm.
@@ -261,3 +304,7 @@ def is_strongly_connected(G):
         return len(G.keys()) == nx.strongly_connected.number_strongly_connected_components(G)
     else:
         return nx.strongly_connected.is_strongly_connected(G)
+
+def drawnet(g):
+    nx.draw_graphviz(g)
+    plt.show()
