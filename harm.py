@@ -65,70 +65,78 @@ class HarmonySearch(object):
         else:
             return ()
         
-    def search(self, data, every=10):
+    def search(self, data, every=10, amnesia=50):
         """Harmony search in Python"""
         #harmony memory
         
-        #cache network nodes
+        #cache network nodes and common functions
         nodes = self.net.nodes()
         Nshuf = N.random.shuffle
         stronglyconnected = network.is_strongly_connected
         
         def newHarmony(hm, net):
             #generate a new harmony [edgeset]
+            
+            #we loop through all possiblities for edges
             for n1 in nodes:
                 for n2 in nodes:
                     if n1 == n2:
+                        #continue on self-loops
                         continue
                     else:
-                        randvals = N.random.rand(4)
+                        randvals = N.random.rand(5)
                         
                         #consider harmony memory
                         if randvals[0] < self.hmcr:
                             #choose a random harmony from memory
                             hmedges = choice(hm).edge
+                            #get the state of the edge.  If no edge return None
                             randedge = hmedges[n1].get(n2, None)
-                            case = 0 if randedge is None else 1
-                            
+                            #define numerical value for state
+                            if randedge is None:
+                                case = 0 if randvals[4] < .5 else 2
+                            else:
+                                case = 1
+                                
                             #perform a pitch adjustment
                             #choose an existing edge and reverse its direction
                             #but don't violate blacklist
-                            #we can have 0. no edge 1. edge, 2. reverse edge
+                            #we can have 0. no edge 1. edge, 2. no edge 3. reverse edge
                             if randvals[1] < self.par:
                                 #do we adjust up or down?
                                 if randvals[2] < .5:
                                     #adjustment down
-                                    case = (case - 1) % 3
+                                    case = (case - 1) % 4
                                 else:
                                     #adjustment up
-                                    case = (case + 1) % 3
+                                    case = (case + 1) % 4
                             
                             #apply the case
                             if case == 1 and (n1, n2) not in self.black_edges:
                                 #add n1, n2 to edges
                                 #but check strong connectedness
                                 net.add_edge(n1, n2)
-                                if stronglyconnected(net):
+                                if not net.is_acyclic():
                                     #we are now cyclic
                                     net.remove_edge(n1, n2)
-                            elif case == 2 and (n2, n1) not in self.black_edges:
+                            elif case == 3 and (n2, n1) not in self.black_edges:
                                 #add n2, n1 to edges
                                 net.add_edge(n2, n1)
-                                if stronglyconnected(net):
+                                if not net.is_acyclic():
                                     net.remove_edge(n2, n1)
                         else:
                             #ignore memory and get a single random note
                             if randvals[3] > .6666 and (n2, n1) not in self.black_edges:
-                                #case == 2
+                                #case == 3
                                 net.add_edge(n2, n1)
-                                if stronglyconnected(net):
+                                if not net.is_acyclic():
                                     net.remove_edge(n2, n1)
                             elif randvals[3] < .3333 and (n1, n2) not in self.black_edges:
                                 #case == 1
                                 net.add_edge(n1, n2)
-                                if stronglyconnected(net):
+                                if not net.is_acyclic():
                                     net.remove_edge(n1, n2)
-                            
+            
             return net
             
         hm = [self._gen_random_harmony(nodes) for i in xrange(self.hms)]
@@ -157,11 +165,6 @@ class HarmonySearch(object):
             self.net.clear()
             self.net.add_edges_from(self.initial.edges())
             newHarmony(hm, self.net)
-            #while not self.net.is_acyclic():
-            #    self.net.clear()
-            #    self.net.add_edges_from(self.initial.edges())
-            #    self.net.add_edges_from(newHarmony(hm, self.net))
-            #    print "Graph not acyclic"
             cpt.cpt(self.net, data)
             score.itlik(self.net, data)
             if self.net > worst:
@@ -171,6 +174,19 @@ class HarmonySearch(object):
             
             if maxiters % every == 0:
                 print "Iteration {0}\tScore (b/w/c): {1}, {2}, {3}".format(maxiters, best.score, worst.score, self.net.score)
+            
+            if maxiters % amnesia == 0:
+                #introduce amnesia into the system.
+                amn = self._gen_random_harmony(nodes)
+                amn.graph.update(self.initial.graph)
+                amn.node.update(self.initial.node)
+                cpt.cpt(amn, data)
+                score.itlik(amn, data)
+                
+                if amn > worst:
+                    hm[0] = amn.copy()
+                    hm.sort()
+                best, worst = hm[-1], hm[0]
             maxiters -= 1
         return best
         
