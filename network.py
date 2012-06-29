@@ -182,7 +182,8 @@ class Network(nx.DiGraph):
             
         
         probs = N.sum(N.log(probs), axis=1)
-        return {tuple(k):v for k, v in zip(states, probs)}
+        return N.c_[states, probs]
+        #return zip(states, probs)
        
     def layout(self, prog="dot", args=''): 
         """Determines network layout using Graphviz's dot algorithm.
