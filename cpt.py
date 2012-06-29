@@ -2,11 +2,17 @@ import numpy as N
 
 import multiprocessing as mp
 
-def cpt(net, data, nodes=None):
+def cpt(net, data, nodes=None, bias=0.0):
     if nodes is not None:
         nodedict = {k:v for k,v in net.node.iteritems() if k in nodes}
     else:
         nodedict = net.node
+    
+    #clamp bias
+    if bias > 1.0:
+        bias = 1.0
+    elif bias < 0.0:
+        bias = 0.0
     
     tiny = N.finfo(float).tiny
     predd = net.pred
@@ -24,6 +30,15 @@ def cpt(net, data, nodes=None):
             y = nsum(matches[:,:-1].all(axis=1))
             #print "z:{0}\ty:{1}".format(z,y)
             cpt[state] = tiny if y == 0 or z == 0 else float(z)/y
+        
+        try:
+            old = d['cpt']
+            tmp = N.absolute(old-cpt)*bias
+            cpt = np.where(old < cpt, cpt-tmp, cpt+tmp)
+        except KeyError:
+            #cpt table does not exist
+            pass
+        
         d['cpt'] = cpt
         d['cptdim'] = tuple(in_edges)
         
