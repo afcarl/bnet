@@ -72,8 +72,7 @@ class Network(nx.DiGraph):
     
     @property
     def ordering(self):
-        lut = self.graph['inlut']
-        return list(lut[n] for n in lut.iterkeys())
+        return self.graph['inlut'].values()
         
     @property
     def adj_mat(self):
@@ -111,17 +110,17 @@ class Network(nx.DiGraph):
         super(Network, self).add_nodes_from(nodes, **attr)
             
         #add the nodes to the lut
-        n = self._next_lut(self.graph['inlut'])
-        self.graph['inlut'] = {i:n for i, n in enumerate(nodes, n)}
+        nexti = self._next_lut(self.graph['inlut'])
+        self.graph['inlut'] = {i:n for i, n in enumerate(nodes, nexti)}
         self.graph['nilut'] = {n:i for i, n in self.graph['inlut'].iteritems()}
         
-    def add_node(self, n, **attr):
-        super(Network, self).add_node(n, **attr)
+    def add_node(self, node, **attr):
+        super(Network, self).add_node(node, **attr)
         
         #add the nodes to the lut
-        n = self._next_lut(self.graph['inlut'])
-        self.graph['inlut'] = {i:n for i, n in enumerate(nodes, n)}
-        self.graph['nilut'] = {n:i for i, n in self.graph['inlut'].iteritems()}
+        nexti = self._next_lut(self.graph['inlut'])
+        self.graph['inlut'].update({nexti: node})
+        self.graph['nilut'].update({node: nexti})
         
     def get_id(self, node):
         """Get id of a node"""
@@ -171,9 +170,13 @@ class Network(nx.DiGraph):
             var_pred_ind = [_graph['nilut'][x] for x in var_pred]
             
             try:
-                cptstate = tuple([_node[v]['states'][states[index[0],p]] for v, p in zip(var_pred, var_pred_ind)])
+                #we already have numeric states
+                cptstate = tuple([states[index[0],p] for p in var_pred_ind])
             except KeyError:
-                print "Invalid state: {0} does not have state {1}".format(v, states[index[0],p])
+                #if we already have state indexes
+                cptstate = tuple([_node[v]['states_ind'][states[index[0],p]] for v, p in zip(var_pred, var_pred_ind)])
+            except:                
+                print "Invalid state: no state {1}".format(states[index[0],p])
                 continue
             
             #print var, cptstate

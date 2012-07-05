@@ -8,7 +8,7 @@ def cpt(net, data, nodes=None, bias=0.0):
     else:
         nodedict = net.node
     
-    #clamp bias
+    #clamp bias to [0.0, 1.0]
     if bias > 1.0:
         bias = 1.0
     elif bias < 0.0:
@@ -19,8 +19,8 @@ def cpt(net, data, nodes=None, bias=0.0):
     nlut = net.graph['nilut']
     nsum = N.sum
     for n, d in nodedict.iteritems():
-        in_edges = predd[n].keys()
-        in_edges.append(n)
+        #we need to check if cptdim already exists.
+        in_edges = d.get('cptdim', predd[n].keys().append(n))
         cpt = N.zeros([net.node[x]['nstates'] for x in in_edges])
         #print "Calculating cpt for node: {0} (inedges: {1})".format(n, in_edges)
         in_edges_id = [nlut[x] for x in in_edges]
@@ -33,8 +33,8 @@ def cpt(net, data, nodes=None, bias=0.0):
         
         try:
             old = d['cpt']
-            tmp = N.absolute(old-cpt)*bias
-            cpt = np.where(old < cpt, cpt-tmp, cpt+tmp)
+            tmp = N.absolute(old - cpt) * bias
+            cpt = N.where(old < cpt, cpt - tmp, cpt + tmp)
         except KeyError:
             #cpt table does not exist
             pass
