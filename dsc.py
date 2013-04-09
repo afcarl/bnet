@@ -69,16 +69,13 @@ class DSC_Parser(object):
                                 try:
                                         parents = line[line.index("|")+1:line.index(")")]
                                         parents = (''.join(parents)).split(',')
+                                        self.network.add_edges_from([(p, name) for p in parents])
                                         parents = parents+[name]
                                         self.network.node[name]['cptdim'] = tuple(parents)
                                 except ValueError:
                                         parents = [name]
                                         self.network.node[name]['cptdim'] = tuple(parents)
 
-                                
-
-                                #add edges to the network
-                                self.network.add_edges_from([(p, name) for p in parents])
 
                                 #create CPT table
                                 cpt = np.zeros([self.network.node[x]['nstates'] for x in parents])
@@ -95,7 +92,7 @@ class DSC_Parser(object):
 
                                         vals = [float(v) for v in vals[:-1].split(',')]
 
-                                        print l, index, vals
+                                        #print l, index, vals
                                         if index:
                                                 cpt[index] = vals
                                         else:

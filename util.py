@@ -10,19 +10,20 @@ def all_parents(net, nodes):
     else:
         return set()
         
-def genRandObs(net, nobs):
+def genRandObs(net, nobs, numeric=True):
     """generate valid random observations for net"""
     
     _inlut = net.graph['inlut']
     _node = net.node
     _choice = random.choice
+    _type = 'ind_states' if numeric else 'states_ind'
     
     obslist = []
     vars = len(_inlut.keys())
     for ol in xrange(nobs):
         ob = []
         for vl in xrange(vars):
-            states = _node[_inlut[vl]]['states'].keys()
+            states = _node[_inlut[vl]][_type].keys()
             ob.append(_choice(states))
         obslist.append(ob)
     return obslist
@@ -35,9 +36,15 @@ def suspect(net, data, threshold=.01, output=None):
     """
     jointprobs = net.jointprob(data)
     nprobs = jointprobs.shape[0]
-    sortedprobs = jointprobs[N.argsort(jointprobs[:,-1].astype(float))]
+    sortedind = N.argsort(jointprobs[:,-1].astype(float))
     suspicious = int(nprobs*threshold)
-    suspected = sortedprobs[:suspicious]
+    print suspicious
+    if suspicious >= 0:
+        suspected = (jointprobs[sortedind])[:suspicious]
+        sortedind = sortedind[:suspicious]
+    else:
+        suspected = (jointprobs[sortedind])[suspicious:]
+        sortedind = sortedind[suspicious:]
     
     suspect_names = []
     _inlut = net.graph['inlut']
@@ -50,18 +57,15 @@ def suspect(net, data, threshold=.01, output=None):
         suspect_names.append(s_row)
         
     if output is not None:
-        if vars:
-            with open(output, 'wb') as f:
-                f.write(','.join([str(char) for char in net.ordering+["log prob"]]))
+        with open(output, 'wb') as f:
+            f.write(','.join([str(char) for char in net.ordering+["log prob"]]))
+            f.write('\n')
+            for obs in suspect_names:
+                f.write(','.join([o for o in obs]))
                 f.write('\n')
-                for obs in suspect_names:
-                    f.write(','.join([o for o in obs]))
-                    f.write('\n')
-        else:
-            raise ValueError("to output to a file, variable names must be specified")
-    else:
-        return suspected
-        
+    
+    return suspected, sortedind
+
 def load_dataset(net, filename):
     """Turn a dataset into corresponding state indexes for network"""
     
@@ -76,5 +80,43 @@ def load_dataset(net, filename):
         
     return numberdata
     
+def clearCPT(net):
+    """Clear the CPT tables of each node in net"""
+    
+    for d in net.node.itervalues():
+        if 'numer' in d:
+            del d['numer']
+        if 'denom' in d:
+            del d['denom']
+        if 'cpt' in d:
+            del d['cpt']
+
+def ajustRandom(net, dataset, obs=.25, vars=.1):
+    """Adjust random parts of random observations
+    
+    Returns a list of indexes changed and a copy of the dataset with changes"""
+    
+    observations = dataset.copy()
+    rows, cols = observations.shape
+    
+    ObsFactor = int(rows*obs) if obs <= 1 else obs
+    VarsFactor = int(cols*vars) if vars <= 1 else vars
+    
+    randobs = N.random.randint(rows, size=ObsFactor)
+    
+    #iterate through each randomly selected observation
+    inlut = net.graph['inlut']
+    randint = N.random.randint
+    for ob in randobs:
+        #select a random variable
+        randvars = randint(cols, size=VarsFactor)
+        
+        #iterate through each randomly selected variable
+        for i, va in zip(randvars, (inlut[x] for x in randvars)):
+            #get the possible states for variable
+            states = net.node[va]['nstates']
+            observations[ob, i] = randint(states)
+            
+    return observations, randobs
     
     

@@ -141,6 +141,46 @@ class Network(nx.DiGraph):
 
         return nx.is_directed_acyclic_graph(self)    
         
+    def cpt(self, node, state):
+        """Return the cpt of state
+        Since numer and denom are tracked separately,
+        this function will divide the two and return the result"""
+        
+        if isinstance(node, int):
+            node = self.graph['nilut'][node]
+            
+        if node in self.node:
+            n = self.node[node].get('numer', None)
+            d = self.node[node].get('denom', None)
+            
+            #we don't have frequency counts, so try for existing cpt table
+            if n is None or d is None:
+                try:
+                    return self.node[node]['cpt'][state]
+                except IndexError:
+                    raise IndexError("Invalid state: ", state)
+                except KeyError:
+                    raise StandardError("No CPT table in this node")
+                except:
+                    raise Exception("Something went wrong... :(")
+                    
+            try:
+                top = float(n[state])
+                bottom = d[state]
+                if d[state] == 0:
+                    raise ZeroDivisionError
+                else:
+                    return float(n[state])/d[state]
+            except IndexError:
+                raise IndexError("Invalid state: ", state)
+            except ZeroDivisionError:
+                #no data has been collected, so assume 0 probability
+                return 0.
+            except:
+                raise Exception("Something went wrong... :(")
+        else:
+            raise StandardError("Node {0} doesn't exist!".format(node))
+        
     def jointprob(self, states):
         """Calculate the joint probability of state (2d numpy array)
         Each row is a state vector, and each column the state values
@@ -170,7 +210,7 @@ class Network(nx.DiGraph):
             var_pred_ind = [_graph['nilut'][x] for x in var_pred]
             
             try:
-                #we already have numeric states
+                #we already haveUsing softwar numeric states
                 cptstate = tuple([states[index[0],p] for p in var_pred_ind])
             except KeyError:
                 #if we already have state indexes
@@ -181,11 +221,13 @@ class Network(nx.DiGraph):
             
             #print var, cptstate
             #print self.node[var]['cpt'].shape
-            probs[index] = _node[var]['cpt'][cptstate]
+            cptprob = self.cpt(var, cptstate)
+            #print cptprob
+            probs[index] = cptprob if cptprob != 0. else probs[index]
             
         
-        probs = N.sum(N.log(probs), axis=1)
-        return N.c_[states, probs]
+        probsl = N.sum(N.log(probs), axis=1)
+        return N.c_[states, probsl]
         #return zip(states, probs)
        
     def layout(self, prog="dot", args=''): 
@@ -312,3 +354,37 @@ def is_strongly_connected(G):
 def drawnet(g):
     nx.draw_graphviz(g)
     plt.show()
+    
+def pydotnet(control, cand, colorsame='black', controldiff='purple', canddiff='red'):
+    """nets is a sequence of network objects.  The edges of the first are taken to be
+    the universal set
+    
+    colorsame = color common edges
+    color diffenrent = color unique edges
+    """
+    
+    pdnet = pydot.Dot(graph_type='digraph')
+    
+    #add the nodes to the Graph
+    nodes = control.nodes()
+    [pdnet.add_node(n) for n in map(pydot.Node, nodes)]
+    
+    edges = [set(n.edges()) for n in (control, cand)]
+    
+    #intersection give edges in both networks
+    sameedges = set.intersection(*edges)
+    #get the unique edges in each network
+    controluniqedges = set(control.edges())-sameedges
+    canduniqedges = set(cand.edges())-sameedges
+    
+    samecol = lambda e: pydot.Edge(*e, color=colorsame)
+    diffcol = lambda e: pydot.Edge(*e, color=controldiff, style='dashed')
+    uniquecol = lambda e: pydot.Edge(*e, color=canddiff)
+    [pdnet.add_edge(e) for e in map(samecol, sameedges)]
+    [pdnet.add_edge(e) for e in map(diffcol, controluniqedges)]
+    [pdnet.add_edge(e) for e in map(uniquecol, canduniqedges)]
+    print "Same Edges: ",len(sameedges)
+    print "Control Edges: ", len(controluniqedges)
+    print "Cand Edges: ", len(canduniqedges)
+    return pdnet
+    
