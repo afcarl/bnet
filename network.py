@@ -11,14 +11,21 @@ class Network(nx.DiGraph):
     def __init__(self, nodes=(), edges=tuple(), score=None):
         """Creates a Network.
         
-        nodes is a list of pebl.data.Variable instances.
-        edges can be:
+        PARAMETERS:
+            nodes       list of nodes in the network
+            edges       list of edges in the network
+            score       score to associate with the network
         
-            * a list of edge tuples
-            * an adjacency matrix (as boolean numpy.ndarray instance)
-            * string representation (see Network.as_string() for format)
-        
+        RETURNS:
+            instance of Network class
         """
+        
+        #nodes is a list of pebl.data.Variable instances.
+        #edges can be:
+        
+            #* a list of edge tuples
+            #* an adjacency matrix (as boolean numpy.ndarray instance)
+            #* string representation (see Network.as_string() for format)
         
         super(Network, self).__init__()
         #initialize the lut in graph
@@ -55,7 +62,7 @@ class Network(nx.DiGraph):
         self.node[node][attr] = value
     
     def _next_lut(self, lut):
-        """Return next available id in lut"""
+        """Return next available id in LUT"""
         try:
             n = max(lut) + 1
         except ValueError:
@@ -81,7 +88,17 @@ class Network(nx.DiGraph):
     def add_edges_from(self, edges, attr_dict=None, **attr):
         """Add edges from [edges] to the network
         
-        Will fail if nodes being connected by edges don't exist"""
+        Will fail if nodes being connected by edges don't exist.
+        This overrides the default behave of nx.DiGraph
+        
+        PARAMETERS: Same parameters as add_edges_from() of nx.DiGraph
+            edges
+            attr_dict   
+            **attr
+            
+        RETURNS:
+            None
+        """
         
         if isinstance(edges, N.ndarray):
             edges = self._adjmat_to_edges(edges)
@@ -90,7 +107,10 @@ class Network(nx.DiGraph):
             self.add_edge(edge[0], edge[1], attr_dict=attr_dict, **attr)
     
     def add_edge(self, u, v, attr_dict=None, **attr):
-        """Add edge between nodes u and v.  u and v must exist otherwise exception is thrown"""
+        """Add edge between nodes u and v.  u and v must exist otherwise exception is thrown
+        
+        Same parameters as add_edge() of nx.DiGraph
+        """
         
         u_exist = u in self.nodes()
         
@@ -107,6 +127,7 @@ class Network(nx.DiGraph):
         self.remove_edges_from(self.edges())
         
     def add_nodes_from(self, nodes, **attr):
+        """Same behavior as add_nodes_from() of nx.DiGraph"""
         super(Network, self).add_nodes_from(nodes, **attr)
             
         #add the nodes to the lut
@@ -115,6 +136,7 @@ class Network(nx.DiGraph):
         self.graph['nilut'] = {n:i for i, n in self.graph['inlut'].iteritems()}
         
     def add_node(self, node, **attr):
+        """Same behavior as add_node() of nx.DiGraph"""
         super(Network, self).add_node(node, **attr)
         
         #add the nodes to the lut
@@ -144,7 +166,15 @@ class Network(nx.DiGraph):
     def cpt(self, node, state):
         """Return the cpt of state
         Since numer and denom are tracked separately,
-        this function will divide the two and return the result"""
+        this function will divide the two and return the result
+        
+        PARAMETERS:
+            node        Node of which to calculate the conditional  probability
+            state       State of which to calculate the conditional probability
+            
+        RETURNS:
+            None
+        """
         
         if isinstance(node, int):
             node = self.graph['nilut'][node]
@@ -193,7 +223,15 @@ class Network(nx.DiGraph):
         at the end.
         
         The order of variables in the state vector should coincide with the indexes
-        of the lookup table for network"""
+        of the lookup table for network
+        
+        PARAMETERS:
+            states      States to use in calculating the joint probability
+            
+        RETURNS:
+            ndarray     two column array. first column are states
+                        second column are the caculated joint probabilities for those states
+        """
         states = N.atleast_2d(states)
         probs = N.zeros(states.shape)
         probs.fill(N.finfo(float).tiny)
@@ -210,7 +248,7 @@ class Network(nx.DiGraph):
             var_pred_ind = [_graph['nilut'][x] for x in var_pred]
             
             try:
-                #we already haveUsing softwar numeric states
+                #we already have numeric states
                 cptstate = tuple([states[index[0],p] for p in var_pred_ind])
             except KeyError:
                 #if we already have state indexes
@@ -268,6 +306,15 @@ def random_network(nodes, required_edges=(), prohibited_edges=(), max_attempts=5
     
     max_attempts sets how many times to try to achieve the criteria.
     If we use up all max_attempts we cut density in half and try again.
+    
+    PARAMETERS:
+        nodes                   nodes to have in network
+        required_edges          edges required to be present in network
+        prohibited_edges        edges required to not be present in network
+        max_attempts            max number of attempts to create a random network
+        
+    RETURNS:
+        Network         A random network
     """
     def _randomize(net, density=None):
         net.clear()
@@ -309,7 +356,17 @@ def random_network(nodes, required_edges=(), prohibited_edges=(), max_attempts=5
     return _randomize(net)
     
 def randomDAG(nodes, white_edges=(), black_edges=(), prob=.5):
-    """Generate a random DAG"""
+    """Generate a random DAG
+    
+    PARAMETERS:
+        nodes           Nodes to have present in network
+        white_edges     edges required to be present in network
+        black_edges     not implemented yet
+        prob            probability of adding an edge
+        
+    RETURNS:
+        Network         A random directed acyclic graph
+    """
     
     #shuffle the nodes
     N.random.shuffle(nodes)
@@ -327,6 +384,13 @@ def dist(net1, net2):
     """Return the distance between two networks
     Defined as how many edges must be added and removed to make net1==net2
     Networks must have the same number of nodes
+    
+    PARAMETERS:
+        net1    Network
+        net2    Network
+    
+    RETURNS:
+        int     distance between networks
     """
     x, y = map(nx.adj_matrix, (net1, net2))
 

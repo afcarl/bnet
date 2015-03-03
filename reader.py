@@ -2,7 +2,17 @@ import network
 import numpy as N
 
 def csv2bnet(filename, names=True, **kargs):
-    """Read a csv file into and return a bnet object"""
+    """Read a csv file into and return a bnet object
+    
+    PARAMETERS:
+        filename        CSV to use in creating network
+        names           are the names of the nodes the first row?
+        **kargs         additional arguments for numpy.recfromcsv
+        
+    RETURNS:
+        net             instance of Network
+        dataset         dataset as numpy array
+    """
     
     data = N.recfromcsv(filename, delimiter=",", names=names, autostrip=True, case_sensitive=True, **kargs)
     
@@ -25,6 +35,14 @@ def parsemodel(s, nodeorder=None, net=None):
     """Parse a modelstring to Bayes Net
     
     Format is as follows [Child|Parent:Parent:...]
+    
+    PARAMETERS:
+        s               string representation of network
+        nodeorder       string of all nodes separated by spaces
+        net             Network instance to use in building network
+        
+    RETURN:
+        Network         instance of Network
     """
     nodes = [t[:-1].split("|") for t in s.split("[") if t]
     

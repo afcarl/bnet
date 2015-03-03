@@ -3,7 +3,16 @@ import numpy as N
 import random
 
 def all_parents(net, nodes):
-    #Get all the parents of nodes
+    """
+    Return a set of immediate parent nodes of a set of nodes.
+    
+    PARAMETERS:
+        net     A bayesian network
+        nodes   a list of nodes for which parents are desired
+        
+    RETURNS:
+        parentset       A set of all parents
+    """
     if nodes:
         parentset = set(nodes)
         return parentset.union(*[all_parents(net, net.predecessors(node)) for node in nodes])
@@ -11,7 +20,17 @@ def all_parents(net, nodes):
         return set()
         
 def genRandObs(net, nobs, numeric=True):
-    """generate valid random observations for net"""
+    """generate valid random observations for net
+    
+    PARAMETERS:
+        net     A bayesian network
+        nobs    number of observations
+        numeric generate numeric based observations (True)
+                otherwise use labels (False)
+    
+    RETURNS:
+        obslist list of random observations
+    """
     
     _inlut = net.graph['inlut']
     _node = net.node
@@ -29,10 +48,18 @@ def genRandObs(net, nobs, numeric=True):
     return obslist
     
 def suspect(net, data, threshold=.01, output=None):
-    """Find the most suspicious claims from jointprobs
+    """
+    Find the most suspicious claims from jointprobs
     
-    Default is least likely 1% of the claims
-    If output is defined, will write results to a file
+    PARAMETERS:
+        net             A bayesian network
+        data            A dataset
+        threshold=.01   Bottom threshold.  Default is least likely 1% of claims
+        output=None     Optionally output to a file
+        
+    RETURNS:
+        suspected       The suspected claims
+        sortedind       The indices of the suspect claims in original dataset
     """
     jointprobs = net.jointprob(data)
     nprobs = jointprobs.shape[0]
@@ -67,7 +94,15 @@ def suspect(net, data, threshold=.01, output=None):
     return suspected, sortedind
 
 def load_dataset(net, filename):
-    """Turn a dataset into corresponding state indexes for network"""
+    """Turn a dataset into corresponding state indexes for network
+    
+    PARAMETERS:
+        net             A bayesian network
+        filename        file from which to load dataset
+        
+    RETURNS:
+        numberdata      values of dataset in a numpy array
+    """    
     
     data = N.recfromcsv(filename, delimiter=",", names=True, autostrip=True, case_sensitive=True)
 
@@ -81,7 +116,14 @@ def load_dataset(net, filename):
     return numberdata
     
 def clearCPT(net):
-    """Clear the CPT tables of each node in net"""
+    """Clear the CPT tables of each node in net
+    
+    PARAMETERS:
+        net     A bayesian network
+        
+    RETURNS:
+        None
+    """
     
     for d in net.node.itervalues():
         if 'numer' in d:
@@ -94,7 +136,18 @@ def clearCPT(net):
 def ajustRandom(net, dataset, obs=.25, vars=.1):
     """Adjust random parts of random observations
     
-    Returns a list of indexes changed and a copy of the dataset with changes"""
+    Returns a list of indexes changed and a copy of the dataset with changes
+    
+    PARAMETERS:
+        net     A bayesian network
+        dataset A dataset (numpy array)
+        obs     percentage of dataset to adjust
+        vars    variance to adjust by
+        
+    RETURNS:
+        observations    copy of dataset that has been adjusted
+        randobs         indexes of dataset have have been changed
+    """
     
     observations = dataset.copy()
     rows, cols = observations.shape
