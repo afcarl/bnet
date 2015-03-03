@@ -1,8 +1,17 @@
 import numpy as N
 
-import multiprocessing as mp
-
 def cpt(net, data, nodes=None, bias=0.0):
+    """
+    Calculate conditional probability tables.  This function
+    modifies the bayesian network.
+    
+    PARAMETERS:
+        net     A Bayesian network
+        data    A dataset
+
+    RETURN:
+        None
+    """
     if nodes is not None:
         nodedict = {k:v for k,v in net.node.iteritems() if k in nodes}
     else:
@@ -52,32 +61,5 @@ def cpt(net, data, nodes=None, bias=0.0):
         d['numer'] = numer
         d['denom'] = denom
         d['cptdim'] = tuple(in_edges)
-        
 
-def multicpt(net, data, nodes=None):
-    """Multiprocessing version of cpt"""
-    
-    if nodes is not None:
-        nodedict = {k:v for k,v in net.node.iteritems() if k in nodes}
-    else:
-        nodedict = net.node
-        
-    #initialize Pool
-    n = mp.cpu_count()
-    n_nodes = nodedict.keys()
-    
-    #split network nodes into n parts
-    avglen = len(n_nodes) / float(n)
-    batches = []
-    last = 0.0
-    
-    while last < len(n_nodes):
-        batches.append(seq[int(last):int(last + avglen)])
-        last += avglen
-        
-    p = mp.Pool(n)
-    for b in batches:
-        p.apply_async(cpt, args=(net,data,), kargs={nodes:b})
-    p.close()
-    p.join()
             
