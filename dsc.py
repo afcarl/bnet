@@ -1,27 +1,54 @@
+"""
+DSC file importer.  This will read and construct a baysesian network
+described in DSC format.  An optional dataset may be loaded as well
+"""
+
 import numpy as np
 import network
 
 class DSC_Parser(object):
         def __init__(self, filename, dataname=None):
-                with open(filename, 'rb') as dsc:
-                        self.data = dsc.readlines()
+            """
+            PARAMETERS:
+                filename        dsc file to parse
+                dataname        dataset to associate with resulting network
+            
+            RETURNS:
+                instance of DSC_Parser class
+            """
+            with open(filename, 'rb') as dsc:
+                    self._data = dsc.readlines()
 
-                self.network = network.Network()
-                self._parse(self.data)
-                
-                #load an optional dataset as well
-                if dataname:
-                        self.dataset = self._loadData(dataname)
+            self.network = network.Network()
+            self._parse(self._data)
+            
+            #load an optional dataset as well
+            if dataname:
+                    self.dataset = self._loadData(dataname)
 
         def _parse(self, data):
-                """Parse the DSC file format"""
+                """Parse the DSC file format
+                
+                PARAMETERS:
+                    data        contents of the dsc file
+                    
+                RETURNS:
+                    None
+                """
 
-                self.name = self.data[0].split()[-1]
+                self.name = self._data[0].split()[-1]
                 self._getNodes()
                 self._getCPT()
 
         def _loadData(self, dataname):
-                """Load an optional dataset along with dsc file"""
+                """Load an optional dataset along with dsc file
+                
+                PARAMETERS:
+                    dataname    filename of optional dataset
+                    
+                RETURNS:
+                    dataset     dataset in a numpy array
+                """
                 
                 data = np.recfromcsv(dataname, delimiter=",", names=True, autostrip=True, case_sensitive=True)
                 net = self.network
@@ -29,14 +56,22 @@ class DSC_Parser(object):
                 dataset = np.zeros((m, n), order='F')
                 for node, d in net.node.iteritems():
                         dstates = d['states_ind']
-                        dataset[:,net.graph['nilut'][node]] = [dstates[str(s)] for s in data[node]]
+                        col = net.graph['nilut'][node]
+                        dataset[:,col] = [dstates[str(s)] for s in data[node]]
                         
                 return dataset
                 
         def _getNodes(self):
-                """Extract all nodes from data"""
+                """Extract all nodes from data.  Modifies the network.
+                
+                PARAMETERS:
+                    None
+                    
+                RETURNS:
+                    None
+                """
 
-                for nline, line in enumerate(self.data):
+                for nline, line in enumerate(self._data):
                         if line.startswith('node'):
                                 #split the line
                                 line = line.split()
@@ -44,7 +79,7 @@ class DSC_Parser(object):
 
                                 self.network.add_node(name)
                                 #advance the line one.
-                                line = self.data[nline+1]
+                                line = self._data[nline+1]
                                 line = line.split()
                                 
                                 #get the number of states
@@ -59,9 +94,16 @@ class DSC_Parser(object):
 
 
         def _getCPT(self):
-                """Extract the CPT table"""
+                """Extract the CPT table.  Modifies the network
+                
+                PARAMETERS:
+                    None
+                    
+                RETURNS:
+                    None
+                """
 
-                for nline, line in enumerate(self.data):
+                for nline, line in enumerate(self._data):
                         if line.startswith('probability'):
                                 line = line.split()
                                 name = line[line.index("(")+1]
@@ -83,7 +125,7 @@ class DSC_Parser(object):
                                 #grab the cptlines
                                 i = 1
                                 while line.count("}") == 0:
-                                        l = self.data[nline+i].strip()
+                                        l = self._data[nline+i].strip()
                                         if len(parents) > 1:
                                                 index, vals = [t.strip() for t in l.split(':')]
                                                 index = tuple([int(s) for s in index[1:-1].split(',')])
@@ -98,7 +140,7 @@ class DSC_Parser(object):
                                         else:
                                                 cpt[:] = vals
                                         i += 1
-                                        line = self.data[nline+i]
+                                        line = self._data[nline+i]
                                 self.network.node[name]['cpt'] = cpt
 
 
