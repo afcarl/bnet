@@ -1,0 +1,25 @@
+Bayesian Network CPT calculator
+
+Written to assist in a research project experiementing with Bayesian network models.
+
+Given a sample dataset and a bayesian network learned from that dataset, this code aims to isolate datapoints that differ significantly from the others, using the connections found from the bayesian network.
+
+The code does not do any bayesian network learning.  For the research project, I relied on R's wonderful bnlearn package to learn bayesian networks.  I wrote a DSC parser that would build NetworkX objects from the networks that I exported from R.
+
+
+File Descriptions:
+cpt.py: Calculates conditional probability tables and attaches them to their respective nodes in the bayesian network.
+
+dsc.py: Import DSC files (a network exchange format).
+
+harm.py: A heuristical optimization algorithm (harmony search) to try an learn a simple bayesian network.  This didn't work as well as I had hoped.  Networks generated were not very good.  Switched to using bnlearn package from R.
+
+learn.py: An attempt at a simple greedy network learner.
+
+network.py: Representation for a bayesian network.  Bayesian networks are directed acyclic graphs.  This object subclasses networkx.DiGraph.  The class also has special methods related to my research for retrieving the cpt and calculating joint probabilities.
+
+reader.py: Read the output of R.  I ended up using modelstrings from R to exchange the networks between R and Python.
+
+score.py: Scoring algorithm used in the greedy algorithm and harmony search
+
+util.py: various utility functions to do a collection of useful things.
